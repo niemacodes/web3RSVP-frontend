@@ -1,8 +1,24 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import getRandomImage from "../utils/getRandomImage";
+import { ethers } from "ethers";
+import connectContract from "../utils/connectContract"
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
+import Alert from "../components/Alert";
 
 export default function CreateEvent() {
+  // User account:
+  const {data: account} = useAccount();
+
+  // Alert messages: 
+  const [success, setSuccess] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(null);
+  const [eventID, setEventID] = useState(null);
+
+  // Event Data:
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
@@ -11,13 +27,99 @@ export default function CreateEvent() {
   const [eventLink, setEventLink] = useState("");
   const [eventDescription, setEventDescription] = useState("");
 
-
+  /**
+   * Organizes form data into a single body object, & sends the body to an API 
+   * endpoint /store-event-data. 
+   * @param {*} e 
+   */
   async function handleSubmit(e) {
     e.preventDefault();
-    console.log("Form submitted")
+
+    // Organizing form data into a single object: 
+    const body = {
+      name: eventName,
+      description: eventDescription,
+      link: eventLink, 
+      image: getRandomImage(), 
+    }
+
+    // Send the body to API endpoint /store-event-data:
+    try{
+      
+      // Create response:
+      const response = await fetch("/api/store-event-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if(response.status !== 200){
+        alert("Oops! Something went wrong. Please refresh & try again!");
+      } else {
+        console.log("Form submitted succesffuly!");
+        let responseJSON = await response.json(); 
+        await createEvent(responseJSON.cid);
+      }
+      // Check the response, if sucess is false, don't take to sucess page:
+    } catch (error){
+      alert(
+        `Oops! Something went wrong. Please refresh & try again. Error ${error}`
+      );
+    }
   }
 
-  
+  /**
+   * Passed in event data to call createNewEvent fn in rsvpContract. 
+   */
+  const createEvent = async (cid) => {
+    try{
+      const rsvpContract = connectContract(); 
+
+      if(rsvpContract){
+        // Parse ETH to correct amount that contract can understand:
+        let deposit = ethers.utils.parseEther(refund);
+
+        // Generating a unix timestamp from the data & time inputs from the form: 
+        let eventDataAndTime = new Date(`${eventDate} ${eventTime}`);
+        let eventTimestamp = eventDataAndTime.getTime(); 
+        let eventDataCID = cid; 
+
+        // Access transaction hash: 
+        const txn = await rsvpContract.createNewEvent(
+          eventTimestamp,
+          deposit, 
+          maxCapacity, 
+          eventDataCID, 
+          {gasLimit: 900000}
+        );
+        
+        // Set loading status: 
+        setLoading(true);
+
+        // Display status:
+        console.log("Minting...", txn.hash);
+        
+        // Wait for transaction: 
+        let wait = await txn.wait(); 
+
+        console.log("Minted ---", txn.hash);
+          
+        // Set event id, sucess, loading, and message:
+        setEventID(wait.events[0].args[0]);
+        setSuccess(true);
+        setLoading(false);
+        setMessage("Your event has been created successfully!");
+      } else {
+        console.log("Error getting contract.");
+      }
+    } catch (error){
+      // Set sucess, message, & loading: 
+      setSuccess(false);
+      setMessage(`There was an error creating your event: ${error.message}`);
+      setLoading(false);
+      console.log(error);
+    }
+  }
 
   useEffect(() => {
     // disable scroll on <input> elements of type number
@@ -38,16 +140,39 @@ export default function CreateEvent() {
         />
       </Head>
       <section className="relative py-12">
-    
+        {loading && (
+          <Alert
+            alertType={"loading"}
+            alertBody={"Please wait"}
+            triggerAlert={true}
+            color={"white"}
+          />
+        )}
+        {success && (
+          <Alert
+            alertType={"success"}
+            alertBody={message}
+            triggerAlert={true}
+            color={"palegreen"}
+          />
+        )}
+        {success === false && (
+          <Alert
+            alertType={"failed"}
+            alertBody={message}
+            triggerAlert={true}
+            color={"palevioletred"}
+          />
+        )}
+        {!success && (
           <h1 className="text-3xl tracking-tight font-extrabold text-gray-900 sm:text-4xl md:text-5xl mb-4">
             Create your virtual event
           </h1>
-        
-     
+        )}
+        {account && !success && (
           <form
             onSubmit={handleSubmit}
-            className="space-y-8 divide-y divide-gray-200"
-          >
+            className="space-y-8 divide-y divide-gray-200">
             <div className="space-y-6 sm:space-y-5">
               <div className="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:pt-5">
                 <label
@@ -216,12 +341,21 @@ export default function CreateEvent() {
               </div>
             </div>
           </form>
-        
-
-          {/* <section className="flex flex-col items-start py-8">
+        )}
+        {success && eventID && (
+          <div>
+            Success! Please wait a few minutes, then check out your event page{" "}
+            <span className="font-bold">
+              <Link href={`/event/${eventID}`}>here</Link>
+            </span>
+          </div>
+        )}
+        {!account && (
+          <section className="flex flex-col items-start py-8">
             <p className="mb-4">Please connect your wallet to create events.</p>
-          </section> */}
-
+            <ConnectButton />
+          </section>
+        )}
       </section>
     </div>
   );
