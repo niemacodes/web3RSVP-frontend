@@ -38,7 +38,7 @@ export default function Navbar() {
               {account ? (
                 <Navmenu account={account} disconnect={() => disconnect()}/>
               ) : (
-                <ConnectButton/>
+                <ConnectButton />
               )}
             </div>
           </div>
