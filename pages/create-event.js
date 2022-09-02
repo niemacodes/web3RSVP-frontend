@@ -26,6 +26,7 @@ export default function CreateEvent() {
   const [refund, setRefund] = useState("");
   const [eventLink, setEventLink] = useState("");
   const [eventDescription, setEventDescription] = useState("");
+  const [eventImage, setEventImage] = useState("");
 
   /**
    * Organizes form data into a single body object, & sends the body to an API 
@@ -40,7 +41,7 @@ export default function CreateEvent() {
       name: eventName,
       description: eventDescription,
       link: eventLink, 
-      image: getRandomImage(), 
+      image: eventImage, 
     }
 
     // Send the body to API endpoint /store-event-data:
@@ -324,7 +325,31 @@ export default function CreateEvent() {
                   />
                 </div>
               </div>
+              {/**76 */}
+              <div className="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:pt-5">
+                <label
+                  htmlFor="event-link"
+                  className="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2"
+                >
+                  Upload Image
+                  <p className="mt-1 max-w-2xl text-sm text-gray-400">
+                    An image for your virtual event!
+                  </p>
+                </label>
+                <div className="mt-1 sm:mt-0 sm:col-span-2">
+                  <input
+                    id="event-image"
+                    name="event-image"
+                    type={"file"}
+                    className="block max-w-lg w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border border-gray-300 rounded-md"
+                    required
+                    value={eventImage}
+                    onChange={(e) => setEventImage(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
+
             <div className="pt-5">
               <div className="flex justify-end">
                 <Link href="/">
